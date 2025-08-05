@@ -13,13 +13,8 @@ from pydantic import BaseModel
 # Import services after models
 from services import gemini_service, redis_service, pinecone_service
 from config import config
-from document_uploader import DocumentProcessor
-from smart_document_processor import SmartDocumentProcessor
-from streaming_processor import StreamingDocumentProcessor
 from supabase_service import supabase_service
-from memory_monitor import global_monitor, monitor_memory, log_system_memory
 from supabase_db_service import supabase_db_service
-from parallel_processor import parallel_processor
 from lightning_processor import lightning_processor
 
 app = FastAPI(title="Document Query Assistant", version="1.0.0")
@@ -459,49 +454,14 @@ async def process_query(request: QueryRequest):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint with memory status"""
-    memory_stats = global_monitor.get_memory_stats()
-    system_memory = log_system_memory()
-    
+    """Health check endpoint"""
     return {
         "status": "healthy", 
         "service": "Document Query Assistant",
-        "memory": {
-            "process_mb": memory_stats["rss_mb"],
-            "process_percent": memory_stats["percent"],
-            "system_available_gb": system_memory["available_gb"],
-            "system_used_percent": system_memory["used_percent"]
-        }
+        "version": "1.0.0"
     }
 
-@app.get("/memory/stats")
-async def get_memory_stats():
-    """Get detailed memory statistics"""
-    process_stats = global_monitor.get_memory_stats()
-    system_stats = log_system_memory()
-    
-    return {
-        "process": process_stats,
-        "system": system_stats,
-        "recommendations": {
-            "cleanup_needed": process_stats["percent"] > 70,
-            "memory_warning": system_stats["used_percent"] > 85,
-            "status": "healthy" if process_stats["percent"] < 70 else "warning" if process_stats["percent"] < 85 else "critical"
-        }
-    }
 
-@app.post("/memory/cleanup")
-async def force_memory_cleanup():
-    """Force memory cleanup"""
-    freed_mb = global_monitor.force_cleanup()
-    stats_after = global_monitor.get_memory_stats()
-    
-    return {
-        "status": "completed",
-        "freed_mb": freed_mb,
-        "current_usage_mb": stats_after["rss_mb"],
-        "current_percent": stats_after["percent"]
-    }
 
 @app.get("/supabase/stats")
 async def get_supabase_stats():
